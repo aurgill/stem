@@ -1,0 +1,330 @@
+---
+title: "Projet"
+output: html_document
+date: "2023-11-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load-packages, message=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(lubridate)
+library(WaveletComp)
+
+```
+
+# 1. Introduction 
+## Contexte Biologique 
+
+
+
+## Données 
+
+Données des planktons 
+
+```{r load-data}
+# Assuming your data is in a CSV file with columns 'timestamp' and 'value'
+
+data_ori <- read.csv("/home/agil/Documents/F/BEE2/STEM/Data/Zooplankton_matrix.csv")
+data_ori$Year.Month.Day <- as.Date(data_ori$Year.Month.Day)
+data_ori <- data_ori %>% arrange(Year.Month.Day)
+
+colnames(data_ori) <- c("date","Temperature","Mnem.larve","Mnem.juv","Mnem.ad","Beroe.ova","Beroe.larve","Beroe.ad","Penilia","Pleopsis","Pseudevadne","Paracalanus","Acartia","Centropages","Oikopleura")
+
+
+data_ori <- data_ori %>% mutate( year = year(date),      # Extract the year
+                     month = month(date))    # Extract the month) 
+```
+
+Données de NAO
+
+```{r}
+
+
+nao <- read.csv("/home/agil/Documents/F/BEE2/STEM/Data/NAO_1990_2017_2.csv")
+nao$Year.Month.Day <- as.Date(nao$Year.Month.Day)
+nao <- nao %>%mutate(  # Convert the full_date column to a date format
+         year = year(Year.Month.Day),      # Extract the year
+         month = month(Year.Month.Day))    # Extract the month)         # Extract the day
+
+data_ori <- left_join(data_ori, nao[,-1])
+```
+
+### Traitement des données - Interpolation 
+
+On va faire une interpolation linéaire. 
+
+```{r}
+#Tous les 10 jours 
+date_list_out <- seq(data_ori$date[1],data_ori$date[921], by="10 days" )
+data <- data.frame("date"=date_list_out)
+
+for (i in 2:18) {
+  val_approx <- approx(data_ori$date,data_ori[,i], date_list_out)
+  data <- cbind(data,val_approx$y)
+}
+
+colnames(data) <- colnames(data_ori)
+
+
+```
+
+
+# 2. Analyse des dynamiques de populations 
+
+
+## Decompositon de Fourier 
+On peut regarder le spectre de Fourier de la série 
+
+```{r}
+
+# Calculer le spectre de Fourier
+spec <- spec.pgram(data$Mnem.juv, log = "no")
+# Créer un dataframe pour ggplot avec les périodes
+df_spec <- data.frame(period = 1/spec$freq, magnitude = spec$spec)
+
+# Afficher le spectre avec les périodes en abscisse
+ggplot(df_spec, aes(x = period, y = magnitude)) +
+  geom_line() +
+  scale_x_log10() +  # Mettre l'axe x en échelle logarithmique pour représenter les périodes
+  labs(title = "Analyse du spectre de Fourier de la population de cténophores",
+       x = "log Période", y = "Spectre de Fourier")
+
+```
+## Analyse du spectre avec les ondelettes 
+Analyse du spectre avec les ondelettes.
+
+```{r}
+my.w <- analyze.wavelet(data, "Mnem.larve",
+                        loess.span = 0,
+                        dt = 10/365, dj = 1/250,
+                        lowerPeriod = 0.5,
+                        upperPeriod = 13,
+                        make.pval = TRUE, n.sim = 10)
+
+
+wt.image(my.w, n.levels = 250,legend.params = list(lab = "wavelet power levels"))
+
+
+wt.avg(my.w)
+
+```
+
+# Course des cténophores
+
+Mnem - Temp 
+Beroe - Temp 
+Beroe / Mnem -> Phase
+
+```{r}
+
+my.wc <- analyze.coherency(data,
+                  my.pair = c("Mnem.larve", "Temperature"),
+                  loess.span = 0,
+                  dt = 10/365, dj = 1/50,
+                  lowerPeriod = 3, upperPeriod = 10 ,
+                  make.pval = TRUE, n.sim = 10)
+                  max.power <- max(my.wc$Power.xy) # for plotting
+  
+                  
+wc.image(my.wc, n.levels = 250,
+          legend.params = list(lab = "cross-wavelet power levels"),
+          color.key = "interval",
+          #maximum.level = (1.001*max.power)**exponent, exponent = exponent,
+          periodtck = 1, periodtcl = NULL)     
+
+wc.sel.phases(my.wc, sel.period = 7,
+              only.sig = TRUE,
+              which.sig = "wc",
+              siglvl = 0.05,
+              phaselim = c(-pi,+pi), ## default if legend.horiz = FALSE
+              legend.coords = "topright", legend.horiz = FALSE,
+              main = "", sub = "", timelab = "")
+
+wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
+              n.levels = 250, siglvl = 0.1,
+              legend.params = list(lab = "phase difference levels",
+              lab.line = 3),
+              timelab = "")
+
+```
+```{r}
+my.wc <- analyze.coherency(data,
+                  my.pair = c("Beroe.ad","Mnem.larve"),
+                  loess.span = 0,
+                  dt = 10/365, dj = 1/50,
+                  lowerPeriod = 0.5, upperPeriod = 2,
+                  make.pval = TRUE, n.sim = 10)
+                  max.power <- max(my.wc$Power.xy) # for plotting
+  
+                  
+wc.image(my.wc, n.levels = 250,
+          legend.params = list(lab = "cross-wavelet power levels"),
+          color.key = "interval",
+          #maximum.level = (1.001*max.power)**exponent, exponent = exponent,
+          periodtck = 1, periodtcl = NULL)     
+
+wc.sel.phases(my.wc, sel.period = 1,
+              only.sig = TRUE,
+              which.sig = "wc",
+              siglvl = 0.05,
+              phaselim = c(-pi,+pi), ## default if legend.horiz = FALSE
+              legend.coords = "topright", legend.horiz = FALSE,
+              main = "", sub = "", timelab = "")
+
+wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
+              n.levels = 250, siglvl = 0.1,
+              legend.params = list(lab = "phase difference levels",
+              lab.line = 3),
+              timelab = "")
+```
+# Pic de Mesoplanktons 
+
+```{r}
+chloro <- read.csv("/home/agil/Documents/F/BEE2/STEM/Data/Chlorophyll_values.csv")
+chloro$Year.Month.Day <- as.Date(chloro$Year.Month.Day)
+chloro <- chloro %>% 
+  select(Year.Month.Day, Chl..mg.m.3) %>% 
+  mutate(year = year(Year.Month.Day), month = month(Year.Month.Day))
+
+data_orichlo <- inner_join(data_ori, chloro[,2:4], by = join_by(year, month))
+
+#Interpolation
+date_list_out <- seq(data_orichlo$date[1],data_orichlo$date[454], by="10 days" )
+datachlo <- data.frame("date"=date_list_out)
+
+for (i in 2:19) {
+  val_approx <- approx(data_orichlo$date,data_orichlo[,i], date_list_out)
+  datachlo <- cbind(datachlo,val_approx$y)
+}
+
+colnames(datachlo) <- colnames(data_orichlo)
+plot(datachlo$date, datachlo$Chl..mg.m.3,type="l")
+boxplot(datachlo$Chl..mg.m.3~trunc(datachlo$month,digits=0))
+
+```
+
+
+#Chlorophylle
+##Analyse du cycle de chlorophylle
+L'analyse du spectre de Fourier montre une première oscillation aux alentours de 30 périodes de dix jours, ce qui pourrait correspondre à un cycle annuel. L'analyse de vaguelettes confirme globalement ce cycle en début de période, qui correspond à des oscillations annuelles avec un pic de chlorophylle en novembre suivi par une décrue jusqu'aux mois de mai-juin. Le cycle annuel est toutefois perturbé aux alentours de 120 périodes (l'année 2001), au cours de laquelle on n'observe pas de chute estivale des taux de chlorophylle, mais au contraire, un pic estival.  
+```{r}
+# Calculer le spectre de Fourier
+spec <- spec.pgram(datachlo$Chl..mg.m.3, log = "no")
+# Créer un dataframe pour ggplot avec les périodes
+df_spec <- data.frame(period = 1/spec$freq, magnitude = spec$spec)
+
+# Afficher le spectre avec les périodes en abscisse
+ggplot(df_spec, aes(x = period, y = magnitude)) +
+  geom_line() +
+  scale_x_log10() +  # Mettre l'axe x en échelle logarithmique pour représenter les périodes
+  labs(title = "Analyse du spectre de Fourier de la densité de chlorophylle",
+       x = "log Période", y = "Spectre de Fourier")
+
+```
+L'analyse des vacgeuelettes montre qu'à partir de 2006 (300 périodes), les périodes se raccourcissent. La période annuelle raccourcit: le cycle initialement basé sur une période de 1 an est de 0,75 an en fin de période d'étude (9 mois). On note que sur l'année 2001 (120 périodes), deux pics de chlorophylle espacés de six mois sont constatés. Les années 2006 et 2008 (300-420 périodes) se caractérisent par de très fortes variations sur des périodes de l'ordre de trois mois, traduisant une forte perturbation du cycle d'activité chlorophyllienne.
+
+```{r}
+my.w <- analyze.wavelet(datachlo, "Chl..mg.m.3",
+                        loess.span = 0,
+                        dt = 10/365, dj = 1/250,
+                        lowerPeriod = 0.2,
+                        upperPeriod = 2.2,
+                        make.pval = TRUE, n.sim = 10)
+
+
+wt.image(my.w, n.levels = 250,legend.params = list(lab = "wavelet power levels"))
+
+
+```
+
+#Analyse des phases de chlorophylle et Mnemiopsis
+L'analyse des phases de prolifération de Mnemiopsis et de chlorophylle montre une évolution du décalage entre la prolifération des algues et celle des Mnemiopsis. A partir de 2001 (120 périodes), leur synchronisation passe d'une périodes annuelle à un cycle sur six mois en opposition de phase, la prolifération de Menmiopsis intervenant en décalage de six mois après le pic de chlorophylle. Les cycles se déphasent ensuite pour connaître un alignement passager aux alentours de 2008 (380 périodes) sur une période de six mois.
+
+```{r}
+
+my.wcm <- analyze.coherency(datachlo,
+                  my.pair = c("Mnem.ad", "Chl..mg.m.3"),
+                  loess.span = 0,
+                  dt = 10/365, dj = 1/50,
+                  lowerPeriod = 0.25, upperPeriod = 2.5,
+                  make.pval = TRUE, n.sim = 100)
+                  max.power <- max(my.wc$Power.xy) # for plotting
+  
+wc.image(my.wcm, n.levels = 50,
+          legend.params = list(lab = "cross-wavelet power levels"),
+          color.key = "interval",
+          periodtck = 1, periodtcl = NULL)     
+
+wc.phasediff.image(my.wcm, which.contour = "wc", use.sAngle = TRUE,
+              n.levels = 250, siglvl = 0.05,
+              legend.params = list(lab = "phase difference levels",
+              lab.line = 3),
+              timelab = "")
+
+wc.sel.phases(my.wcm, sel.period = 0.5,
+              only.sig = TRUE,
+              which.sig = "wc",
+              siglvl = 0.05,
+              phaselim = c(-pi,+pi), ## default if legend.horiz = FALSE
+              legend.coords = "topright", legend.horiz = FALSE,
+              main = "", sub = "", timelab = "")
+
+```
+
+#Analyse des phases de chlorophylle et Beroe
+Parallèlement, le cycle des Beroe semble aligné sur un cycle annuel jusqu'aux alentours de 2007, ce qui est cohérent avec l'étude que nous avons tenté de reproduire. Toutefois en 2007, elles se synchronisent de façon passagère avec le cycle chlorophyllien, qui est de trois mois cette année-là. Ce résultat n'a pas été mis en évidence par l'étude de référence, qui ne visualise pas les périodes inférieures à 6 mois.
+```{r}
+my.wcb <- analyze.coherency(datachlo,
+                  my.pair = c("Beroe.larve", "Chl..mg.m.3"),
+                  loess.span = 0,
+                  dt = 10/365, dj = 1/50,
+                  lowerPeriod = 0.25, upperPeriod = 2.5,
+                  make.pval = TRUE, n.sim = 100)
+                  max.power <- max(my.wc$Power.xy) # for plotting
+  
+wc.image(my.wcb, n.levels = 50,
+          legend.params = list(lab = "cross-wavelet power levels"),
+          color.key = "interval",
+          periodtck = 1, periodtcl = NULL)     
+
+
+wc.phasediff.image(my.wcb, which.contour = "wc", use.sAngle = TRUE,
+              n.levels = 250, siglvl = 0.05,
+              legend.params = list(lab = "phase difference levels",
+              lab.line = 3),
+              timelab = "")
+
+wc.sel.phases(my.wcb, sel.period = 1,
+              only.sig = TRUE,
+              which.sig = "wc",
+              siglvl = 0.05,
+              phaselim = c(-pi,+pi), ## default if legend.horiz = FALSE
+              legend.coords = "topright", legend.horiz = FALSE,
+              main = "", sub = "", timelab = "")
+wc.sel.phases(my.wcb, sel.period = 0.5,
+              only.sig = TRUE,
+              which.sig = "wc",
+              siglvl = 0.05,
+              phaselim = c(-pi,+pi), ## default if legend.horiz = FALSE
+              legend.coords = "topright", legend.horiz = FALSE,
+              main = "", sub = "", timelab = "")
+wc.sel.phases(my.wcb, sel.period = 0.35,
+              only.sig = TRUE,
+              which.sig = "wc",
+              siglvl = 0.05,
+              phaselim = c(-pi,+pi), ## default if legend.horiz = FALSE
+              legend.coords = "topright", legend.horiz = FALSE,
+              main = "", sub = "", timelab = "")
+
+```
+
+
+# Conclusion 
+
+
+
