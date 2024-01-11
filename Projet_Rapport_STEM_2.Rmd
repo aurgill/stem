@@ -266,7 +266,7 @@ wt.image(my.w, n.levels = 250,legend.params = list(lab = "wavelet power levels")
 ```
 
 #Analyse des phases de chlorophylle et Mnemiopsis
-L'analyse des phases de prolifération de Mnemiopsis et de chlorophylle montre une évolution du décalage entre la prolifération des algues et celle des Mnemiopsis. A partir de 2001 (120 périodes), leur synchronisation passe d'une périodes annuelle à un cycle sur six mois en opposition de phase, la prolifération de Menmiopsis intervenant en décalage de six mois après le pic de chlorophylle. Les cycles se déphasent ensuite pour connaître un alignement passager aux alentours de 2008 (380 périodes).
+Nous reproduisons l'article en comparant les cycles des adultes Mnemiopsis et de la chlrophylle. L'analyse des phases de prolifération de Mnemiopsis et de chlorophylle montre une évolution du décalage entre la prolifération des algues et celle des Mnemiopsis. A partir de 2001 (120 périodes), leur synchronisation passe d'une périodes annuelle à un cycle sur six mois en opposition de phase, la prolifération de Menmiopsis intervenant en décalage de six mois après le pic de chlorophylle. Les cycles se déphasent ensuite pour connaître un alignement passager aux alentours de 2008 (380 périodes).
 
 ```{r}
 
@@ -300,7 +300,7 @@ wc.sel.phases(my.wcm, sel.period = 0.5,
 ```
 
 #Analyse des phases de chlorophylle et Beroe
-Parallèlement, le cycle des Beroe semble aligné sur un cycle annuel jusqu'aux alentours de 2007, ce qui est cohérent avec l'étude que nous avons tenté de reproduire. Toutefois en 2007, elles se synchronisent de façon passagère avec le cycle chlorophyllien, qui est de trois mois cette année-là. Ce résultat n'a pas été mis en évidence par l'étude de référence, qui ne visualise pas les périodes inférieures à 6 mois; toutefois les représentations graphiques sont globalement cohérentes avec les résultats de l'article initial.
+Parallèlement, nous avons réussi à retrouver les résultats de l'étude initiale en ce qui concerne l'analyse comparée du cycle de larves de Beroe et de chlorophylle. Le cycle des Beroe semble aligné sur un cycle annuel jusqu'aux alentours de 2007, ce qui est cohérent avec l'étude que nous avons tenté de reproduire. Toutefois en 2007, elles se synchronisent de façon passagère avec le cycle chlorophyllien, qui est de trois mois cette année-là. Ce résultat n'a pas été mis en évidence par l'étude de référence, qui ne visualise pas les périodes inférieures à 6 moisl.
 
 ```{r}
 my.wcb <- analyze.coherency(datachlo,
