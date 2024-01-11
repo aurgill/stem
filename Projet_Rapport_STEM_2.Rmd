@@ -19,17 +19,20 @@ library(WaveletComp)
 
 # 1. Introduction 
 ## Contexte Biologique 
-
+Le plancton est la base des écosystèmes marins et désigne l’ensemble des végétaux et animaux aquatiques qui dérivent au gré des courants. Le phytoplancton correspond au plancton autotrophe dit « végétal » qui se situe au niveau fondamental du système trophique des milieux aquatiques. Le zooplancton, dit plancton « animal », constitue le niveau primaire et secondaire correspondant respectivement au plancton permanent (holoplancton) et temporaire (méroplancton). 
+         Au début du printemps, l’augmentation des températures stimule le déversement des eaux continentales dans la mer, augmente le brassage des eaux marines et favorise donc un milieu aquatique riche en matière minérale ce qui est un élément clef pour le développement des phytoplanctons [Marra 1990]. L’augmentation du taux de croissance des phytoplanctons à cette période confirme l’instauration de ces conditions favorables. Cependant, si effectivement les concentrations de chlorophylle augmentent, elles n’explosent pas. Cela s’explique par l’augmentation simultanée et un peu plus forte de l’activité de « broutage » (grazing) des zooplanctons [Anderson and Harvey 2019]. La présence de nutriment et l’effet top-down effectué par les zooplanctons correspondent aux deux facteurs majeurs responsables de la dynamique des phytoplanctons. [Steel and Henderson 1992]. 
+         Comprendre la dynamique temporelle des différents types de planctons est un enjeu majeur pour certaines activités humaines comme la pêche ou la compréhension du risque d’algues toxiques. Ainsi Vereshchaka et al. 2022 ont entrepris une analyse de la dynamique temporelle de deux cténophores invasives Mnemiopsis leidyi et son prédateur Beroe ovata introduits respectivement dans les années 1980 et 1990 à partir d’une série temporelle de 27 ans avec 918 échantillons. Ces données avaient permis de trouver des résultats intéressants sur l’impact de ces espèces invasives sur l’écosystème de la mer Noire. Ainsi, 3 périodes ont été distinguées : une période dominée par l’influence de M. leidyi de 1991 à 1998, une période de transition de 1999 à 2002 et une période régulée par B. ovata de 2003 à 2017 [Vereshchaka et al 2019a].
+         L’objectif de notre analyse est de comprendre la dynamique qui s’est installée entre les deux espèces invasives M. leidyi et B. ovata et de comprendre comment elle impacte la dynamique des autres espèces selon une régulation top-down. Nous comparerons ces dynamiques à la dynamique de la température qui est un proxy fidèle de l’influence de la saisonnalité.
 
 
 ## Données 
 
-Données des planktons 
+Données des planctons 
 
 ```{r load-data}
 # Assuming your data is in a CSV file with columns 'timestamp' and 'value'
 
-data_ori <- read.csv("/home/agil/Documents/F/BEE2/STEM/Data/Zooplankton_matrix.csv")
+data_ori <- read.csv("/stem/Zooplankton_matrix.csv")
 data_ori$Year.Month.Day <- as.Date(data_ori$Year.Month.Day)
 data_ori <- data_ori %>% arrange(Year.Month.Day)
 
@@ -56,7 +59,7 @@ data_ori <- left_join(data_ori, nao[,-1])
 
 ### Traitement des données - Interpolation 
 
-On va faire une interpolation linéaire. 
+Interpolation linéaire (tous les 10 jours) pour compenser les endroits où l'on a un manque de données et avoir plus de points pour l'analyse.
 
 ```{r}
 #Tous les 10 jours 
@@ -76,8 +79,9 @@ colnames(data) <- colnames(data_ori)
 
 # 2. Analyse des dynamiques de populations 
 
+## Dynamique des larves de Mnemiopsis
 
-## Decompositon de Fourier 
+### Décompositon de Fourier 
 On peut regarder le spectre de Fourier de la série 
 
 ```{r}
@@ -95,7 +99,7 @@ ggplot(df_spec, aes(x = period, y = magnitude)) +
        x = "log Période", y = "Spectre de Fourier")
 
 ```
-## Analyse du spectre avec les ondelettes 
+### Analyse du spectre avec les ondelettes 
 Analyse du spectre avec les ondelettes.
 
 ```{r}
@@ -114,7 +118,7 @@ wt.avg(my.w)
 
 ```
 
-# Course des cténophores
+### Course des cténophores : analyse des dynamiques de Mnemiopsis et de la température
 
 Mnem - Temp 
 Beroe - Temp 
@@ -152,6 +156,13 @@ wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
               timelab = "")
 
 ```
+
+
+### Dynamique des larves de Mnemiopsis et de Beroe
+On constate sur les spectres de puissance que Mnemiopsis et Beroe ont une dynamique fortement expliquée par une période de 1 ans. Cependant, sur les scalogrames on voit que les dynamiques des deux cténophores ne sont pas expliquées aussi fortement au même moment par la périodicité de 1 ans. En effet, avant les années 2000 la périodicité à 1 an contribue fortement à la dynamique des   Mnemiopsis. Entre 2000 à 2005 la périodicité de 1 an explique moins bien la dynamique des deux espèces. Enfin à partir de 2005 la périodicité de 1 contribue fortement cette fois-ci à la dynamique des Beroe. Ainsi on retrouve bien les 3 périodes de Vershchaka 2019.
+On peut considérer que la périodicité de 1 an correspond à la dynamique cyclique des saisons. Ainsi la saisonnalité est un facteur majeur dans l’explication de la dynamique des deux espèces de cténophores. Cependant, le poids de la contribution de la saisonnalité à leur dynamique varie dans le temps et diffère entre les deux espèces. La diminution de la contribution de la saisonnalité à la dynamique des Mnemiopsis correspond à la période d’introduction et d’installation des Beroe dans la Mer Noire. L’introduction des Beroe a donc eu un impact important sur la dynamique de Mnemiopsis.
+
+
 ```{r}
 my.wc <- analyze.coherency(data,
                   my.pair = c("Beroe.ad","Mnem.larve"),
@@ -182,10 +193,14 @@ wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
               lab.line = 3),
               timelab = "")
 ```
-# Pic de Mesoplanktons 
+## Analyse des pics de Mésoplanktons 
+On dispose de données au pas mensuel de septembre 1997 à décembre 2010. La projection des données montre une oscillation saisonnière jusqu'en 2008, date à partir de la quelle les cycles du phytoplancton deviennent chaotiques.
+
+###Interpolation des données de chlorophylle
+De manière à pouvoir comparer les données de population des  L'oscillation saisonnière correspond à des pics de chlorophylle en novembre suivis par une décrue avec un minimum en mai-juin. On constate que la projection conserve le profil des données.
 
 ```{r}
-chloro <- read.csv("/home/agil/Documents/F/BEE2/STEM/Data/Chlorophyll_values.csv")
+chloro <- read.csv("/stem/Chlorophyll_values.csv")
 chloro$Year.Month.Day <- as.Date(chloro$Year.Month.Day)
 chloro <- chloro %>% 
   select(Year.Month.Day, Chl..mg.m.3) %>% 
@@ -193,9 +208,13 @@ chloro <- chloro %>%
 
 data_orichlo <- inner_join(data_ori, chloro[,2:4], by = join_by(year, month))
 
-#Interpolation
 date_list_out <- seq(data_orichlo$date[1],data_orichlo$date[454], by="10 days" )
 datachlo <- data.frame("date"=date_list_out)
+
+par(mfrow=c(1,2))
+plot(datachlo$date, datachlo$Chl..mg.m.3,type="l")
+boxplot(datachlo$Chl..mg.m.3~trunc(datachlo$month,digits=0))
+
 
 for (i in 2:19) {
   val_approx <- approx(data_orichlo$date,data_orichlo[,i], date_list_out)
@@ -203,15 +222,19 @@ for (i in 2:19) {
 }
 
 colnames(datachlo) <- colnames(data_orichlo)
-plot(datachlo$date, datachlo$Chl..mg.m.3,type="l")
-boxplot(datachlo$Chl..mg.m.3~trunc(datachlo$month,digits=0))
+
+par(mfrow=c(2,2))
+plot(chloro$Year.Month.Day, chloro$Chl..mg.m.3,type="l",ylab="Chlorophylle en mg/m3",xlab="", main ="Mesures")
+boxplot(chloro$Chl..mg.m.3~chloro$month,ylab="Chlorophylle en mg/m3",xlab="", main="Mesures")
+
+plot(datachlo$date, datachlo$Chl..mg.m.3,type="l",ylab="Chlorophylle en mg/m3",xlab="", main="Interpolation")
+boxplot(datachlo$Chl..mg.m.3~trunc(datachlo$month,digits=0),ylab="Chlorophylle en mg/m3", main="Interpolation")
 
 ```
 
+###Analyse du cycle de chlorophylle
+L'analyse du spectre de Fourier montre une première oscillation aux alentours de environ 30 périodes de dix jours, ce qui pourrait correspondre à un cycle annuel. L'analyse de vaguelettes confirme globalement ce cycle annuel en début de période. Le cycle annuel est toutefois perturbé aux alentours de 120 périodes (l'année 2001), au cours de laquelle on n'observe pas de chute estivale des taux de chlorophylle, mais au contraire, un pic estival. Cela correspond à ce qui est observé sur la projection des données. Toutefois l'analyse du spectrogramme montre que ce cycle sur 6 mois est décalé par rapport au cycle annuel.
 
-#Chlorophylle
-##Analyse du cycle de chlorophylle
-L'analyse du spectre de Fourier montre une première oscillation aux alentours de 30 périodes de dix jours, ce qui pourrait correspondre à un cycle annuel. L'analyse de vaguelettes confirme globalement ce cycle en début de période, qui correspond à des oscillations annuelles avec un pic de chlorophylle en novembre suivi par une décrue jusqu'aux mois de mai-juin. Le cycle annuel est toutefois perturbé aux alentours de 120 périodes (l'année 2001), au cours de laquelle on n'observe pas de chute estivale des taux de chlorophylle, mais au contraire, un pic estival.  
 ```{r}
 # Calculer le spectre de Fourier
 spec <- spec.pgram(datachlo$Chl..mg.m.3, log = "no")
@@ -226,7 +249,7 @@ ggplot(df_spec, aes(x = period, y = magnitude)) +
        x = "log Période", y = "Spectre de Fourier")
 
 ```
-L'analyse des vacgeuelettes montre qu'à partir de 2006 (300 périodes), les périodes se raccourcissent. La période annuelle raccourcit: le cycle initialement basé sur une période de 1 an est de 0,75 an en fin de période d'étude (9 mois). On note que sur l'année 2001 (120 périodes), deux pics de chlorophylle espacés de six mois sont constatés. Les années 2006 et 2008 (300-420 périodes) se caractérisent par de très fortes variations sur des périodes de l'ordre de trois mois, traduisant une forte perturbation du cycle d'activité chlorophyllienne.
+L'analyse des vaguelettes montre qu'à partir de 2006 (300 périodes), les périodes se raccourcissent. La période annuelle raccourcit: le cycle initialement basé sur une période de 1 an est de 0,75 an en fin de période d'étude (9 mois). On note que sur l'année 2001 (120 périodes), deux pics de chlorophylle espacés de six mois sont constatés. Les années 2006 et 2008 (300-420 périodes) se caractérisent par de très fortes variations sur des périodes de l'ordre de trois mois, traduisant une forte perturbation du cycle d'activité chlorophyllienne.
 
 ```{r}
 my.w <- analyze.wavelet(datachlo, "Chl..mg.m.3",
@@ -243,7 +266,7 @@ wt.image(my.w, n.levels = 250,legend.params = list(lab = "wavelet power levels")
 ```
 
 #Analyse des phases de chlorophylle et Mnemiopsis
-L'analyse des phases de prolifération de Mnemiopsis et de chlorophylle montre une évolution du décalage entre la prolifération des algues et celle des Mnemiopsis. A partir de 2001 (120 périodes), leur synchronisation passe d'une périodes annuelle à un cycle sur six mois en opposition de phase, la prolifération de Menmiopsis intervenant en décalage de six mois après le pic de chlorophylle. Les cycles se déphasent ensuite pour connaître un alignement passager aux alentours de 2008 (380 périodes) sur une période de six mois.
+L'analyse des phases de prolifération de Mnemiopsis et de chlorophylle montre une évolution du décalage entre la prolifération des algues et celle des Mnemiopsis. A partir de 2001 (120 périodes), leur synchronisation passe d'une périodes annuelle à un cycle sur six mois en opposition de phase, la prolifération de Menmiopsis intervenant en décalage de six mois après le pic de chlorophylle. Les cycles se déphasent ensuite pour connaître un alignement passager aux alentours de 2008 (380 périodes).
 
 ```{r}
 
@@ -277,7 +300,8 @@ wc.sel.phases(my.wcm, sel.period = 0.5,
 ```
 
 #Analyse des phases de chlorophylle et Beroe
-Parallèlement, le cycle des Beroe semble aligné sur un cycle annuel jusqu'aux alentours de 2007, ce qui est cohérent avec l'étude que nous avons tenté de reproduire. Toutefois en 2007, elles se synchronisent de façon passagère avec le cycle chlorophyllien, qui est de trois mois cette année-là. Ce résultat n'a pas été mis en évidence par l'étude de référence, qui ne visualise pas les périodes inférieures à 6 mois.
+Parallèlement, le cycle des Beroe semble aligné sur un cycle annuel jusqu'aux alentours de 2007, ce qui est cohérent avec l'étude que nous avons tenté de reproduire. Toutefois en 2007, elles se synchronisent de façon passagère avec le cycle chlorophyllien, qui est de trois mois cette année-là. Ce résultat n'a pas été mis en évidence par l'étude de référence, qui ne visualise pas les périodes inférieures à 6 mois; toutefois les représentations graphiques sont globalement cohérentes avec les résultats de l'article initial.
+
 ```{r}
 my.wcb <- analyze.coherency(datachlo,
                   my.pair = c("Beroe.larve", "Chl..mg.m.3"),
